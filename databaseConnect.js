@@ -3,8 +3,7 @@ require("dotenv").config();
 const mongoose = require("mongoose");
 
 mongoose.Promise = global.Promise;
-const MONGODB_URL =
-  "mongodb+srv://airline-personal-project-2022:project2022@airline-project-cluster.5z5h2wm.mongodb.net/?retryWrites=true&w=majority";
+const MONGODB_URL = `mongodb+srv://${process.env.DB_USERNAME}:${process.env.DB_PASSWORD}@airline-project-cluster.5z5h2wm.mongodb.net/?retryWrites=true&w=majority`;
 const databaseConnection = mongoose
   .connect(MONGODB_URL, {
     useNewUrlParser: true,
