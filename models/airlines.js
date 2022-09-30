@@ -1,4 +1,5 @@
 const { Schema, model } = require("mongoose");
+const slugify = require("slugify");
 
 const airlineSchema = new Schema({
   name: {
@@ -12,7 +13,7 @@ const airlineSchema = new Schema({
     type: String,
     unique: true,
   },
-  fees_policy: {
+  fees: {
     type: String,
   },
   slug: {
@@ -22,7 +23,7 @@ const airlineSchema = new Schema({
 });
 
 airlineSchema.pre("save", function (next) {
-  this.slug = slugify(this.title, {
+  this.slug = slugify(this.name, {
     lower: true,
   });
   next();
