@@ -2,7 +2,7 @@ const express = require("express");
 const app = express();
 const path = require("path");
 const airlineRoutes = require("./routes/airlines");
-//const destinations = require("./controllers/destinations");
+const destinationRoutes = require("./routes/destinations");
 require("./databaseConnect");
 const methodOverride = require("method-override");
 const PORT = process.env.port || 8000;
@@ -19,5 +19,6 @@ app.set("view engine", "ejs");
 app.set("views", path.join(__dirname, "/views"));
 
 app.use("/", airlineRoutes);
+app.use("/:slug/destination", destinationRoutes);
 
 app.listen(PORT, () => console.log(`server running on port ${PORT}`));
