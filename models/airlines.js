@@ -1,5 +1,6 @@
 const { Schema, model } = require("mongoose");
 const slugify = require("slugify");
+const Destination = require("./destinations");
 
 const airlineSchema = new Schema({
   name: {

@@ -1,10 +1,15 @@
 const { Schema, model } = require("mongoose");
+const slugify = require("slugify");
+const Airline = require("./airlines");
 
 const destinationSchema = new Schema({
   name: {
     type: String,
     required: true,
     unique: true,
+  },
+  slug: {
+    type: String,
   },
   location: {
     type: String,
@@ -23,7 +28,7 @@ const destinationSchema = new Schema({
     enum: ["false", "true"],
     default: "false",
     unique: true,
-    required: ture,
+    required: true,
   },
   aiport: {
     name: {
@@ -43,7 +48,7 @@ const destinationSchema = new Schema({
 });
 
 destinationSchema.pre("save", function (next) {
-  this.slug = slugify(this.title, {
+  this.slug = slugify(this.name, {
     lower: true,
   });
   next();
