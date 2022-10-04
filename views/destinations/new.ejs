@@ -1,7 +1,10 @@
 <%- include("../../partials/head") %>
 <section>
   <div class="container">
-    <form action="/airline/<%= destinations.slug %>/destinations" method="POST">
+    <form
+      action="/airlines/<%= destinations.slug %>/destinations"
+      method="POST"
+    >
       <h1 class="form-title">Add Destination</h1>
       <div clas="form-body">
         <label for="name">Destination Name:</label>
@@ -49,7 +52,7 @@
       </div>
       <div class="button-container">
         <button type="submit" class="btn send-btn">Create</button>
-        <a href="/airline" class="btn cancel-btn">Cancel</a>
+        <a href="/airlines" class="btn cancel-btn">Cancel</a>
       </div>
     </form>
   </div>
