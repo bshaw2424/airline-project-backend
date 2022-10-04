@@ -20,29 +20,25 @@ const destinationSchema = new Schema({
     type: String,
     enum: ["false", "true"],
     default: "false",
-    unique: true,
     required: true,
   },
   seasonal: {
     type: String,
     enum: ["false", "true"],
     default: "false",
+    required: true,
+  },
+  airport_name: {
+    type: String,
     unique: true,
     required: true,
   },
-  aiport: {
-    name: {
-      type: String,
-      unique: true,
-      required: true,
-    },
-    code: {
-      type: String,
-      unique: true,
-      upercase: true,
-      maxLength: 3,
-      required: true,
-    },
+  airport_code: {
+    type: String,
+    unique: true,
+    upercase: true,
+    maxLength: 3,
+    required: true,
   },
   destinations: [{ type: Schema.Types.ObjectId, ref: "Airline" }],
 });
