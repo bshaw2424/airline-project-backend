@@ -23,7 +23,7 @@ module.exports.post = async (req, res) => {
 
   await newDestination.save();
   await airline.save();
-  res.redirect(`/airline/${slug}`);
+  res.redirect(`/airlines/${slug}`);
 };
 
 module.exports.edit = async (req, res) => {
@@ -51,5 +51,5 @@ module.exports.update = async (req, res) => {
 module.exports.delete = async (req, res) => {
   const { slug } = req.params;
   await Airlines.findOneAndDelete({ slug: slug });
-  res.redirect("/");
+  res.redirect("/airlines");
 };
