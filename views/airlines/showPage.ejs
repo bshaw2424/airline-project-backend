@@ -1,0 +1,17 @@
+<%- include("../../partials/head") %>
+
+<section>
+  <div class="container">
+    <div class="title-container">
+      <h1><a href="/"><%= showPage.name %></a></h1>
+      <div class="divider"></div>
+      <a
+        href="/airline/<%= showPage.slug %>/destinations/new"
+        class="btn create-button"
+        >create new destination</a
+      >
+    </div>
+  </div>
+</section>
+
+<%- include("../../partials/footer") %>

@@ -1,0 +1,29 @@
+<%- include("../../partials/head") %>
+
+<section>
+  <div class="container">
+    <div class="title-container">
+      <h1>Airlines</h1>
+      <div class="divider"></div>
+      <a href="/airline/new" class="btn create-button">create new airline</a>
+    </div>
+    <div class="row">
+      <% for(const airline of airlines) { %>
+      <div class="col s6 m4 l3">
+        <div class="card">
+          <img src="<%= airline.logos %>" height="200px" width="100%"" alt="" />
+          <a href="/airline/<%= airline.slug %>" class="card-title">
+            <%= airline.name %>
+          </a>
+        </div>
+        <div class="button-container">
+          <a href="/airline/<%= airline.slug %>/edit" class="btn"> Edit </a>
+        </div>
+      </div>
+
+      <% } %>
+    </div>
+  </div>
+</section>
+
+<%- include("../../partials/footer") %>

@@ -1,0 +1,57 @@
+<%- include("../../partials/head") %>
+<section>
+  <div class="container">
+    <form action="/airline/<%= destinations.slug %>/destinations" method="POST">
+      <h1 class="form-title">Add Destination</h1>
+      <div clas="form-body">
+        <label for="name">Destination Name:</label>
+        <input
+          type="text"
+          id="name"
+          class="input-fields"
+          name="Destination[name]"
+        />
+        <label for="location">Location: </label>
+        <input
+          type="text"
+          id="location"
+          class="input-fields"
+          name="Destination[location]"
+        />
+        <label for="international">International: </label>
+        <input
+          type="text"
+          id="international"
+          class="input-fields"
+          name="Destination[international]"
+        />
+        <label for="seasonal">Seasonal: </label>
+        <input
+          type="text"
+          id="seasonal"
+          class="input-fields"
+          name="Destination[seasonal]"
+        />
+        <label for="airportName">Airport Name: </label>
+        <input
+          type="text"
+          id="airportName"
+          class="input-fields"
+          name="Destination[airport_name]"
+        />
+        <label for="airportCode">Airport Code: </label>
+        <input
+          type="text"
+          id="airportCode"
+          class="input-fields"
+          name="Destination[airport_code]"
+        />
+      </div>
+      <div class="button-container">
+        <button type="submit" class="btn send-btn">Create</button>
+        <a href="/airline" class="btn cancel-btn">Cancel</a>
+      </div>
+    </form>
+  </div>
+</section>
+<%- include("../../partials/footer") %>
