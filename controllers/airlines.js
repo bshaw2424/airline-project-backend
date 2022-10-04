@@ -13,7 +13,7 @@ module.exports.post = async (req, res) => {
   const { Airline } = req.body;
   const newAirline = new Airlines(Airline);
   await newAirline.save();
-  res.redirect("/airline");
+  res.redirect("/airlines");
 };
 
 module.exports.showPage = async (req, res) => {
@@ -41,11 +41,11 @@ module.exports.update = async (req, res) => {
     },
   );
   await airline.save();
-  res.redirect("/airline");
+  res.redirect("/airlines");
 };
 
 module.exports.delete = async (req, res) => {
   const { slug } = req.params;
   await Airlines.findOneAndDelete({ slug: slug });
-  res.redirect("/airline");
+  res.redirect("/airlines");
 };
