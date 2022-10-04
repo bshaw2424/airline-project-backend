@@ -18,7 +18,7 @@ app.use(methodOverride("_method"));
 app.set("view engine", "ejs");
 app.set("views", path.join(__dirname, "/views"));
 
-app.use("/airline", airlineRoutes);
-app.use("/airline/:slug/destinations", destinationRoutes);
+app.use("/airlines", airlineRoutes);
+app.use("/airlines/:slug/destinations", destinationRoutes);
 
 app.listen(PORT, () => console.log(`server running on port ${PORT}`));
