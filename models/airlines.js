@@ -14,9 +14,6 @@ const airlineSchema = new Schema({
     type: String,
     unique: true,
   },
-  fees: {
-    type: String,
-  },
   slug: {
     type: String,
   },
