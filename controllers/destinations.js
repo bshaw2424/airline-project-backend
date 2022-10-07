@@ -2,8 +2,11 @@ const Airlines = require("../models/airlines");
 const Destinations = require("../models/destinations");
 
 module.exports.index = async (req, res) => {
-  const airlines = await Airlines.find({});
-  res.render("destinations/index", { airlines });
+  const { slug } = req.params;
+  const destinations = await Airlines.findOne({ slug }).populate(
+    "destinations",
+  );
+  res.render("destinations/index", { destinations });
 };
 
 module.exports.new = async (req, res) => {
@@ -24,6 +27,13 @@ module.exports.post = async (req, res) => {
   await newDestination.save();
   await airline.save();
   res.redirect(`/airlines/${slug}`);
+};
+
+module.exports.showPage = async (req, res) => {
+  const { slug, destination } = req.params;
+  const showPage = await Airlines.findOne({ slug });
+  const destinations = await Destinations.findOne({ destination });
+  res.render("destinations/showPage", { showPage, destinations });
 };
 
 module.exports.edit = async (req, res) => {
