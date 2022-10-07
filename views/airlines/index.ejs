@@ -4,14 +4,25 @@
   <div class="container">
     <div class="title-container">
       <h1>Airlines</h1>
-      <div class="divider"></div>
       <a href="/airlines/new" class="btn create-button">create new airline</a>
     </div>
     <div class="row">
       <% for(const airline of airlines) { %>
-      <div class="col s6 m4 l3">
-        <div class="card">
-          <img src="<%= airline.logos %>" height="200px" width="100%"" alt="" />
+      <div class="col s6 m4 l4">
+        <div class="card" style="box-shadow: none">
+          <div class="card-image z-depth-1">
+            <img
+              src="../../images/<%= airline.logo %>"
+              height="200px"
+              alt="<%= airline.name %> logo"
+              style="
+                object-fit: contain;
+                height: 180px;
+                width: 100%;
+                padding: 1rem;
+              "
+            />
+          </div>
           <a href="/airlines/<%= airline.slug %>" class="card-title">
             <%= airline.name %>
           </a>

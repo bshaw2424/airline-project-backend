@@ -8,8 +8,16 @@
       <a
         href="/airlines/<%= showPage.slug %>/destinations/new"
         class="btn create-button"
-        >create new destination</a
       >
+        create new destination
+      </a>
+    </div>
+    <div>
+      <ul>
+        <% for(let destination of destinations.destinations){ %>
+        <li><%= destination.airport_code %></li>
+        <% } %>
+      </ul>
     </div>
   </div>
 </section>
