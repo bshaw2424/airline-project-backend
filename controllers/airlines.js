@@ -19,7 +19,10 @@ module.exports.post = async (req, res) => {
 module.exports.showPage = async (req, res) => {
   const { slug } = req.params;
   const showPage = await Airlines.findOne({ slug });
-  res.render("airlines/showPage", { showPage });
+  const destinations = await Airlines.findOne({ slug }).populate(
+    "destinations",
+  );
+  res.render("airlines/showPage", { showPage, destinations });
 };
 
 module.exports.edit = async (req, res) => {
