@@ -40,7 +40,7 @@ const destinationSchema = new Schema({
     maxLength: 3,
     required: true,
   },
-  destinations: [{ type: Schema.Types.ObjectId, ref: "Airline" }],
+  destinations: { type: Schema.Types.ObjectId, ref: "Airline" },
 });
 
 destinationSchema.pre("save", function (next) {
