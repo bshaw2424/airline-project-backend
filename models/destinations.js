@@ -6,7 +6,6 @@ const destinationSchema = new Schema({
   name: {
     type: String,
     required: true,
-    unique: true,
   },
   slug: {
     type: String,
@@ -14,7 +13,6 @@ const destinationSchema = new Schema({
   location: {
     type: String,
     required: true,
-    unique: true,
   },
   international: {
     type: String,
