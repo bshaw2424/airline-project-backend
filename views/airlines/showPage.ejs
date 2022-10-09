@@ -14,7 +14,9 @@
     <div>
       <ul>
         <% for(let destination of destinations.destinations){ %>
-        <li><%= destination.airport_code %></li>
+        <li>
+          <b><%= destination.airport_code %></b> - <%= destination.location %>
+        </li>
         <% } %>
       </ul>
     </div>
