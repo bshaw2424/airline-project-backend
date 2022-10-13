@@ -28,12 +28,10 @@ const destinationSchema = new Schema({
   },
   airport_name: {
     type: String,
-    unique: true,
     required: true,
   },
   airport_code: {
     type: String,
-    unique: true,
     upercase: true,
     maxLength: 3,
     required: true,
