@@ -3,7 +3,12 @@
 <section>
   <div class="container">
     <div class="title-container">
-      <h1><a href="/airlines"><%= showPage.name %></a></h1>
+      <h1>
+        <a href="/airlines"
+          ><%= showPage.name %> (<%= destinations.destinations.length %>
+          Destinations)</a
+        >
+      </h1>
       <a
         href="/airlines/<%= showPage.slug %>/destinations/new"
         class="btn create-button"
@@ -11,14 +16,14 @@
         create new destination
       </a>
     </div>
-    <div>
+    <div class="col l4">
+      <% for(let destination of destinations.destinations){ %>
       <ul>
-        <% for(let destination of destinations.destinations){ %>
         <li>
           <b><%= destination.airport_code %></b> - <%= destination.location %>
         </li>
-        <% } %>
       </ul>
+      <% } %>
     </div>
   </div>
 </section>
