@@ -20,7 +20,7 @@
       <% for(let destination of destinations.destinations){ %>
       <ul>
         <li>
-          <b><%= destination.airport_code %></b> - <%= destination.location %>
+          <b><a href=""><%= destination.airport_code %></b></a> - <%= destination.city %>, <%= destination.state %>
         </li>
       </ul>
       <% } %>
