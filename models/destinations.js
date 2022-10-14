@@ -10,7 +10,11 @@ const destinationSchema = new Schema({
   slug: {
     type: String,
   },
-  location: {
+  city: {
+    type: String,
+    required: true,
+  },
+  state: {
     type: String,
     required: true,
   },
