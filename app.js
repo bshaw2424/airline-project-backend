@@ -1,5 +1,6 @@
 const express = require("express");
 const app = express();
+const cors = require("cors");
 const path = require("path");
 const airlineRoutes = require("./routes/airlines");
 const destinationRoutes = require("./routes/destinations");
@@ -17,6 +18,8 @@ app.use(methodOverride("_method"));
 
 app.set("view engine", "ejs");
 app.set("views", path.join(__dirname, "/views"));
+
+app.use(cors());
 
 app.use("/airlines", airlineRoutes);
 app.use("/airlines/:slug/destinations", destinationRoutes);
