@@ -1,8 +1,9 @@
 const Airlines = require("../models/airlines");
 
 module.exports.index = async (req, res) => {
-  const airlines = await Airlines.find({});
-  res.render("airlines/index", { airlines });
+  const airlines = await Airlines.find();
+  res.json(airlines);
+  //res.render("airlines/index", { airlines });
 };
 
 module.exports.newAirline = async (req, res) => {
