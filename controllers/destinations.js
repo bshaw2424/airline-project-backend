@@ -30,16 +30,17 @@ module.exports.post = async (req, res) => {
 };
 
 module.exports.showPage = async (req, res) => {
-  const { slug, destination } = req.params;
+  const { slug, id } = req.params;
   const showPage = await Airlines.findOne({ slug });
-  const destinations = await Destinations.findOne({ destination });
+  const destinations = await Destinations.findOne({ id: id });
   res.render("destinations/showPage", { showPage, destinations });
 };
 
 module.exports.edit = async (req, res) => {
-  const { slug } = req.params;
-  const airlines = await Airlines.findOne({ slug: slug });
-  res.render("destinations/edit", { airlines });
+  const { slug, destination } = req.params;
+  const destinations = await Destinations.findOne({ slug: destination });
+  const airlines = await Airlines.findOne({ slug });
+  res.render("destinations/edit", { destinations, airlines });
 };
 
 module.exports.update = async (req, res) => {
