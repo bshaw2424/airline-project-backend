@@ -1,0 +1,73 @@
+<%- include("../../partials/head") %>
+<section>
+  <div class="container">
+    <form action="" method="POST">
+      <h1 class="form-title">Edit <%= destinations.name %></h1>
+      <div class="form-body">
+        <label for="name">Destination Name:</label>
+        <input
+          type="text"
+          id="name"
+          class="input-fields"
+          name="Destination[name]"
+          value="<%= destinations.name %>"
+        />
+        <label for="location">City: </label>
+        <input
+          type="text"
+          id="location"
+          class="input-fields"
+          name="Destination[city]"
+          value="<%= destinations.city %>"
+        />
+        <label for="location">State: </label>
+        <input
+          type="text"
+          id="location"
+          class="input-fields"
+          name="Destination[state]"
+          value="<%= destinations.state %>"
+        />
+        <label for="international">International: </label>
+        <input
+          type="text"
+          id="international"
+          class="input-fields"
+          name="Destination[international]"
+          value="<%= destinations.international %>"
+        />
+        <label for="seasonal">Seasonal: </label>
+        <input
+          type="text"
+          id="seasonal"
+          class="input-fields"
+          name="Destination[seasonal]"
+          value="<%= destinations.seasonal %>"
+        />
+        <label for="airportName">Airport Name: </label>
+        <input
+          type="text"
+          id="airportName"
+          class="input-fields"
+          name="Destination[airport_name]"
+          value="<%= destinations.airport_name %>"
+        />
+        <label for="airportCode">Airport Code: </label>
+        <input
+          type="text"
+          id="airportCode"
+          class="input-fields"
+          name="Destination[airport_code]"
+          value="<%= destinations.airport_code %>"
+        />
+      </div>
+      <div class="button-container">
+        <button type="submit" class="btn send-btn">Update</button>
+        <a href="/airlines/<%= airlines.slug %>" class="btn cancel-btn"
+          >Cancel</a
+        >
+      </div>
+    </form>
+  </div>
+</section>
+<%- include("../../partials/footer") %>
