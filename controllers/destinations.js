@@ -6,7 +6,11 @@ module.exports.index = async (req, res) => {
   const destinations = await Airlines.findOne({ slug }).populate(
     "destinations",
   );
-  res.render("destinations/index", { destinations });
+  // Sort the populated destinations by a specific field, e.g., 'name'
+  const sortedDestinations = destinations.destinations.sort((a, b) =>
+    a.name.localeCompare(b.name),
+  );
+  res.render("destinations/index", { sortedDestinations });
 };
 
 module.exports.new = async (req, res) => {
@@ -30,9 +34,10 @@ module.exports.post = async (req, res) => {
 };
 
 module.exports.showPage = async (req, res) => {
-  const { slug, id } = req.params;
+  const { slug, destination } = req.params;
   const showPage = await Airlines.findOne({ slug });
-  const destinations = await Destinations.findOne({ id: id });
+  const destinations = await Destinations.findOne({ slug: destination });
+
   res.render("destinations/showPage", { showPage, destinations });
 };
 
@@ -44,19 +49,19 @@ module.exports.edit = async (req, res) => {
 };
 
 module.exports.update = async (req, res) => {
-  const { slug } = req.params;
-  const { Airline } = req.body;
-  const airline = await Airlines.findOneAndUpdate(
+  const { slug, destination } = req.params;
+  const { Destination } = req.body;
+  const updateAirlineDestination = await Destinations.findOneAndUpdate(
     {
-      slug: slug,
+      slug: destination,
     },
-    { ...Airline },
+    { ...Destination },
     {
       new: true,
     },
   );
-  await airline.save();
-  res.redirect("/");
+  await updateAirlineDestination.save();
+  res.redirect(`/airlines/${slug}`);
 };
 
 module.exports.delete = async (req, res) => {
