@@ -22,7 +22,11 @@ module.exports.showPage = async (req, res) => {
   const destinations = await Airlines.findOne({ slug }).populate(
     "destinations",
   );
-  res.render("airlines/showPage", { showPage, destinations });
+  // Sort the populated destinations by a specific field, e.g., 'name'
+  const sortedDestinations = destinations.destinations.sort((a, b) =>
+    a.name.localeCompare(b.name),
+  );
+  res.render("airlines/showPage", { showPage, sortedDestinations });
 };
 
 module.exports.edit = async (req, res) => {
