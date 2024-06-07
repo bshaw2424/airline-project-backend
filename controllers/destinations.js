@@ -15,7 +15,7 @@ module.exports.index = async (req, res) => {
 
 module.exports.new = async (req, res) => {
   const { slug } = req.params;
-  const destinations = await Airlines.findOne({ slug });
+  const destinations = await Airlines.findOne({ slug: slug });
   res.render("destinations/new", { destinations });
 };
 
@@ -65,7 +65,7 @@ module.exports.update = async (req, res) => {
 };
 
 module.exports.delete = async (req, res) => {
-  const { slug } = req.params;
-  await Airlines.findOneAndDelete({ slug: slug });
-  res.redirect("/airlines");
+  const { slug, destination } = req.params;
+  await Destinations.findOneAndDelete({ slug: destination });
+  res.redirect(`/airlines/${slug}`);
 };
