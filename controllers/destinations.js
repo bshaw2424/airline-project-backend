@@ -1,5 +1,6 @@
 const Airlines = require("../models/airlines");
 const Destinations = require("../models/destinations");
+const mongoose = require("mongoose")
 
 module.exports.index = async (req, res) => {
   const { slug } = req.params;
@@ -65,7 +66,27 @@ module.exports.update = async (req, res) => {
 };
 
 module.exports.delete = async (req, res) => {
-  const { slug, destination } = req.params;
-  await Destinations.findOneAndDelete({ slug: destination });
+const { slug, destination } = req.params;
+try {
+
+  // get ObjectId of target destinations looking to remove from array
+  const destinationObjectId = mongoose.Types.ObjectId(destination);
+
+  // Find the airline and remove the destinations from the destinations array
+  const updatedAirline = await Airlines.findOneAndUpdate(
+    { slug: slug },
+    { $pull: { destinations: destinationObjectId } },
+    { new: true } // returns updated document
+  );
+
+  if (!updatedAirline) {
+    return res.status(404).send('Airline not found');
+  }
+
   res.redirect(`/airlines/${slug}`);
+} catch (error) {
+  console.error('Error in delete:', error);
+  res.status(500).send('Internal Server Error');
+}
+
 };
