@@ -50,19 +50,42 @@ module.exports.edit = async (req, res) => {
 };
 
 module.exports.update = async (req, res) => {
-  const { slug, destination } = req.params;
-  const { Destination } = req.body;
-  const updateAirlineDestination = await Destinations.findOneAndUpdate(
-    {
-      slug: destination,
-    },
-    { ...Destination },
-    {
-      new: true,
-    },
-  );
-  await updateAirlineDestination.save();
+const { slug, destination } = req.params; // Extract slugs from request parameters
+const { Destination } = req.body; 
+
+try {
+
+// Find the parent document by its slug
+  const findAirlineBySlugAndPopulateDestinations = await Airlines.findOne({ slug: slug }).populate("destinations")
+
+// Handle case when airline is not found
+  if (!findAirlineBySlugAndPopulateDestinations) {
+    return res.status(404).send('Airline not found');
+  }
+
+// Find the destination subdocument by its slug
+  const findDestinationSlug =  findAirlineBySlugAndPopulateDestinations.destinations.find(dest => dest.slug === destination);
+ 
+// Handle case when destination is not found
+  if (!findDestinationSlug) {
+    return res.status(404).send('Destination not found');
+  }
+
+// Update the destination subdocument with the new data
+  findDestinationSlug.set(Destination);
+  
+// Save the updated parent document and destination
+  await findDestinationSlug.save()
+  await findAirlineBySlugAndPopulateDestinations.save();
+
+// Redirect to the updated airline page
   res.redirect(`/airlines/${slug}`);
+} catch (err) {
+// Handle errors
+  console.error(err);
+  res.status(500).send('Server error');
+}
+
 };
 
 module.exports.delete = async (req, res) => {
