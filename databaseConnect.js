@@ -2,6 +2,9 @@
 require("dotenv").config();
 const mongoose = require("mongoose");
 
+// Set the strictQuery option according to your preference
+mongoose.set("strictQuery", false);
+
 mongoose.Promise = global.Promise;
 const MONGODB_URL = `mongodb+srv://${process.env.DB_USERNAME}:${process.env.DB_PASSWORD}@airline-project-cluster.5z5h2wm.mongodb.net/${process.env.DB_USER}`;
 const databaseConnection = mongoose
