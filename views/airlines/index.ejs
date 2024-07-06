@@ -2,13 +2,13 @@
 
 <section>
   <div class="container">
-    <div class="title-container">
+    <div class="title-container" style="margin: 2rem 0">
       <h1>Airlines</h1>
       <a href="/airlines/new" class="btn create-button">create new airline</a>
     </div>
     <div class="row">
       <% for(const airline of airlines) { %>
-      <div class="col s6 l3">
+      <div class="col s6 l2">
         <div class="card" style="box-shadow: none; position: relative">
           <a href="/airlines/<%= airline.slug %>" class="card-title">
             <div class="card-image z-depth-1">

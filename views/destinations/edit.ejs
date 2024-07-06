@@ -1,7 +1,10 @@
 <%- include("../../partials/head") %>
 <section>
   <div class="container">
-    <form action="" method="POST">
+    <form
+      action="/airlines/<%= airlines.slug %>/destinations/<%= destinations.slug %>?_method=PUT"
+      method="POST"
+    >
       <h1 class="form-title">Edit <%= destinations.name %></h1>
       <div class="form-body">
         <label for="name">Destination Name:</label>
@@ -61,9 +64,9 @@
           value="<%= destinations.airport_code %>"
         />
       </div>
-      <div class="button-container">
-        <button type="submit" class="btn send-btn">Update</button>
-        <a href="/airlines/<%= airlines.slug %>" class="btn cancel-btn"
+      <div class="button-container"  >
+        <button type="submit" class="btn send-btn blue">Update</button>
+        <a href="/airlines/<%= airlines.slug %>" class="btn cancel-btn red"
           >Cancel</a
         >
       </div>

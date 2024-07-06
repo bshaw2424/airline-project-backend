@@ -2,10 +2,10 @@
 
 <section>
   <div class="container">
-    <div class="title-container">
+    <div class="title-container" style="margin-bottom: 1rem">
       <h1>
         <a href="/airlines"> <%= showPage.name %> </a>
-        - <%= destinations.destinations.length %> Destinations
+        - <%= sortedDestinations.length %> Destinations
       </h1>
       <a
         href="/airlines/<%= showPage.slug %>/destinations/new"
@@ -13,18 +13,46 @@
       >
         create new destination
       </a>
+      <div style="margin-top: 2rem">
+        <input type="text" name="" id="" placeholder="Search Destination" />
+      </div>
     </div>
-    <div class="col s12 m3 l4 xl4">
-      <ul>
-        <% for(let destination of destinations.destinations){ %>
+    <div class="row">
+      <% for(let destination of sortedDestinations){ %>
+      <div class="col s12 m3 l4 xl4">
+        <div class="card" style="padding: 1rem">
+          <h3
+            class="card-title"
+            style="margin: 0; text-align: center; margin-bottom: 1.5rem"
+          >
+            <%= destination.name %> (<b> <%= destination.airport_code %> </b>)
+          </h3>
 
-        <li>
-          <b><a href=""><%= destination.airport_code %></a></b> - <%=
-          destination.city %>, <%= destination.state %>
-        </li>
-
-        <% } %>
-      </ul>
+          <div
+            style="
+              margin-top: 1rem;
+              display: flex;
+              justify-content: space-evenly;
+            "
+          >
+            <a
+              href="/airlines/<%= showPage.slug %>/destinations/<%= destination.slug %>/edit"
+              class="btn-floating blue"
+              ><i class="material-icons">edit</i></a
+            >
+            <form
+              action="/airlines/<%= showPage.slug %>/destinations/<%= destination.id %>/remove?_method=PUT"
+              method="POST"
+            >
+              <button type="submit" class="btn-floating red">
+                <i class="material-icons">delete</i>
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+      <% } %>
+      hlkhkh
     </div>
   </div>
 </section>
