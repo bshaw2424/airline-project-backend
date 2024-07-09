@@ -23,6 +23,7 @@ module.exports.showPage = async (req, res) => {
     "destinations",
   );
   // Sort the populated destinations by a specific field, e.g., 'name'
+  console.log(destinations);
   const sortedDestinations = destinations.destinations.sort((a, b) =>
     a.name.localeCompare(b.name),
   );
