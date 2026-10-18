@@ -13,6 +13,7 @@ const airlineApiRoutes = require("./routes/airlineApi");
 const authRoutes = require("./routes/authRoutes");
 const favoriteRoutes = require("./routes/favoriteRoutes");
 const collectionRoutes = require("./routes/collectionRoutes");
+const tripsRouter = require("./routes/trips");
 
 const { databaseConnection, MONGODB_URL } = require("./databaseConnect");
 
@@ -68,6 +69,7 @@ app.use(
 app.use("/api/auth", authRoutes);
 app.use("/api/favorites", favoriteRoutes);
 app.use("/api/collections", collectionRoutes);
+app.use("/api/trips", tripsRouter);
 
 // Existing public routes
 app.use("/airlines", airlineRoutes);
