@@ -87,8 +87,6 @@ app.use("/api/trips", tripsRouter);
 // app.use("/airlines", airlineRoutes);
 // app.use("/airlines/:slug/destinations", destinationRoutes);
 app.use("/api/airlines", airlineApiRoutes);
-app.use("/api/airlines/info", airlineApiRoutes);
-app.use("/api/airlines/:slug", airlineApiRoutes);
 
 // Start only after MongoDB connects.
 databaseConnection
