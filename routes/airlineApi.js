@@ -4,6 +4,6 @@ const routes = require("../controllers/airlineApi");
 
 Router.get("/", routes.index);
 Router.get("/info", routes.destinationIndex);
-Router.get("/destinations", routes.showPage);
+Router.get("/:slug/destinations", routes.showPage);
 
 module.exports = Router;

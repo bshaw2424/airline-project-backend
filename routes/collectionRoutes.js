@@ -1,5 +1,8 @@
 const express = require("express");
 const mongoose = require("mongoose");
+const MAX_COLLECTIONS_PER_USER = 50;
+const MAX_DESTINATIONS_PER_COLLECTION = 200;
+const MAX_PLACES_PER_COLLECTION = 200;
 
 const Collection = require("../models/Collections");
 
@@ -54,6 +57,16 @@ router.post("/", async (req, res) => {
     if (typeof description !== "string" || description.length > 500) {
       return res.status(400).json({
         message: "Description must be 500 characters or fewer.",
+      });
+    }
+
+    const collectionCount = await Collection.countDocuments({
+      user: req.session.userId,
+    });
+
+    if (collectionCount >= MAX_COLLECTIONS_PER_USER) {
+      return res.status(403).json({
+        message: `You have reached the maximum of ${MAX_COLLECTIONS_PER_USER} collections.`,
       });
     }
 
@@ -198,14 +211,11 @@ router.delete("/:id", async (req, res) => {
   }
 });
 
-/*
- * PATCH update a custom place in a collection
- */
+// PATCH update a custom place in a collection
 router.patch("/:id/places/:placeId", async (req, res) => {
   try {
     const { id, placeId } = req.params;
 
-    // Validate collection and place IDs
     if (!isValidId(id) || !isValidId(placeId)) {
       return res.status(400).json({
         message: "Invalid collection or place ID.",
@@ -216,21 +226,18 @@ router.patch("/:id/places/:placeId", async (req, res) => {
 
     const allowedTypes = ["city", "state", "country", "attraction", "other"];
 
-    // Validate place name
     if (typeof name !== "string" || !name.trim() || name.trim().length > 120) {
       return res.status(400).json({
         message: "Place name must be 1–120 characters.",
       });
     }
 
-    // Validate place type
     if (!allowedTypes.includes(type)) {
       return res.status(400).json({
         message: "Please select a valid place type.",
       });
     }
 
-    // Validate optional location fields
     if (
       [city, state, country].some(
         value => typeof value !== "string" || value.trim().length > 120,
@@ -241,7 +248,6 @@ router.patch("/:id/places/:placeId", async (req, res) => {
       });
     }
 
-    // Normalize values for duplicate comparison
     const normalize = value => value.trim().replace(/\s+/g, " ").toLowerCase();
 
     const updatedPlace = {
@@ -252,7 +258,6 @@ router.patch("/:id/places/:placeId", async (req, res) => {
       country: country.trim(),
     };
 
-    // Find collection belonging to logged-in user
     const collection = await Collection.findOne({
       _id: id,
       user: req.session.userId,
@@ -264,7 +269,6 @@ router.patch("/:id/places/:placeId", async (req, res) => {
       });
     }
 
-    // Find the custom place
     const place = collection.places.id(placeId);
 
     if (!place) {
@@ -273,7 +277,6 @@ router.patch("/:id/places/:placeId", async (req, res) => {
       });
     }
 
-    // Check for duplicates, excluding the place being edited
     const duplicate = collection.places.some(existingPlace => {
       if (existingPlace._id.toString() === placeId) {
         return false;
@@ -296,7 +299,6 @@ router.patch("/:id/places/:placeId", async (req, res) => {
       });
     }
 
-    // Update the existing place
     place.set(updatedPlace);
 
     await collection.save();
@@ -317,7 +319,7 @@ router.patch("/:id/places/:placeId", async (req, res) => {
 // POST add a destination to a collection
 router.post("/:id/destinations", async (req, res) => {
   try {
-    const { airportCode } = req.body;
+    const { airportCode } = req.body || {};
 
     if (!isValidId(req.params.id)) {
       return res.status(400).json({
@@ -335,26 +337,57 @@ router.post("/:id/destinations", async (req, res) => {
       {
         _id: req.params.id,
         user: req.session.userId,
+        $or: [
+          { destinations: airportCode },
+          {
+            $expr: {
+              $lt: [
+                {
+                  $size: {
+                    $ifNull: ["$destinations", []],
+                  },
+                },
+                MAX_DESTINATIONS_PER_COLLECTION,
+              ],
+            },
+          },
+        ],
       },
       {
         $addToSet: {
           destinations: airportCode,
         },
       },
-      { new: true },
+      {
+        new: true,
+        runValidators: true,
+      },
     );
 
     if (!collection) {
-      return res.status(404).json({
-        message: "Collection not found.",
+      const existingCollection = await Collection.exists({
+        _id: req.params.id,
+        user: req.session.userId,
+      });
+
+      if (!existingCollection) {
+        return res.status(404).json({
+          message: "Collection not found.",
+        });
+      }
+
+      return res.status(409).json({
+        message: `Maximum of ${MAX_DESTINATIONS_PER_COLLECTION} destinations reached.`,
       });
     }
 
-    res.json({ collection });
+    return res.status(200).json({
+      collection,
+    });
   } catch (error) {
     console.error("Add destination error:", error);
 
-    res.status(500).json({
+    return res.status(500).json({
       message: "Unable to add destination.",
     });
   }
@@ -406,10 +439,7 @@ router.delete("/:id/destinations/:airportCode", async (req, res) => {
   }
 });
 
-/*
- * POST add a custom place to a collection
- */
-
+// POST add a custom place to a collection
 router.post("/:id/places", async (req, res) => {
   try {
     if (!isValidId(req.params.id)) {
@@ -422,21 +452,18 @@ router.post("/:id/places", async (req, res) => {
 
     const allowedTypes = ["city", "state", "country", "attraction", "other"];
 
-    // Validate place name
     if (typeof name !== "string" || !name.trim() || name.trim().length > 120) {
       return res.status(400).json({
         message: "Place name must be 1–120 characters.",
       });
     }
 
-    // Validate place type
     if (!allowedTypes.includes(type)) {
       return res.status(400).json({
         message: "Please select a valid place type.",
       });
     }
 
-    // Validate optional location fields
     if (
       [city, state, country].some(
         value => typeof value !== "string" || value.trim().length > 120,
@@ -447,10 +474,8 @@ router.post("/:id/places", async (req, res) => {
       });
     }
 
-    // Normalize values for duplicate comparison
     const normalize = value => value.trim().replace(/\s+/g, " ").toLowerCase();
 
-    // Prepare new place
     const place = {
       name: name.trim(),
       type,
@@ -459,7 +484,6 @@ router.post("/:id/places", async (req, res) => {
       country: country.trim(),
     };
 
-    // Find the user's collection
     const collection = await Collection.findOne({
       _id: req.params.id,
       user: req.session.userId,
@@ -471,7 +495,6 @@ router.post("/:id/places", async (req, res) => {
       });
     }
 
-    // Check for an existing matching place
     const duplicate = collection.places.some(existingPlace => {
       return (
         normalize(existingPlace.name) === normalize(place.name) &&
@@ -488,7 +511,12 @@ router.post("/:id/places", async (req, res) => {
       });
     }
 
-    // Add place to collection
+    if (collection.places.length >= MAX_PLACES_PER_COLLECTION) {
+      return res.status(409).json({
+        message: `Maximum of ${MAX_PLACES_PER_COLLECTION} custom places reached.`,
+      });
+    }
+
     collection.places.push(place);
 
     await collection.save();
@@ -506,9 +534,7 @@ router.post("/:id/places", async (req, res) => {
   }
 });
 
-/*
- * DELETE remove a custom place from a collection
- */
+// DELETE remove a custom place from a collection
 router.delete("/:id/places/:placeId", async (req, res) => {
   try {
     const { id, placeId } = req.params;

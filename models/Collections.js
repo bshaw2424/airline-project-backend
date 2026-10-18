@@ -66,7 +66,14 @@ const collectionSchema = new mongoose.Schema(
     },
 
     destinations: {
-      type: [String],
+      type: [
+        {
+          type: String,
+          uppercase: true,
+          trim: true,
+          match: /^[A-Z0-9]{3,4}$/,
+        },
+      ],
       default: [],
     },
 
