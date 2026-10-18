@@ -7,13 +7,14 @@ const methodOverride = require("method-override");
 const session = require("express-session");
 const MongoStore = require("connect-mongo");
 
-const airlineRoutes = require("./routes/airlines");
-const destinationRoutes = require("./routes/destinations");
+// const airlineRoutes = require("./routes/airlines");
+// const destinationRoutes = require("./routes/destinations");
 const airlineApiRoutes = require("./routes/airlineApi");
 const authRoutes = require("./routes/authRoutes");
 const favoriteRoutes = require("./routes/favoriteRoutes");
 const collectionRoutes = require("./routes/collectionRoutes");
 const tripsRouter = require("./routes/trips");
+const verifyOrigin = require("./middleware/verifyOrigin");
 
 const { databaseConnection, MONGODB_URL } = require("./databaseConnect");
 
@@ -65,6 +66,17 @@ app.use(
   }),
 );
 
+// Protect state-changing API requests against CSRF.
+app.use("/api", (req, res, next) => {
+  const safeMethods = ["GET", "HEAD", "OPTIONS"];
+
+  if (safeMethods.includes(req.method)) {
+    return next();
+  }
+
+  return verifyOrigin(req, res, next);
+});
+
 // Authentication Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/favorites", favoriteRoutes);
@@ -72,8 +84,8 @@ app.use("/api/collections", collectionRoutes);
 app.use("/api/trips", tripsRouter);
 
 // Existing public routes
-app.use("/airlines", airlineRoutes);
-app.use("/airlines/:slug/destinations", destinationRoutes);
+// app.use("/airlines", airlineRoutes);
+// app.use("/airlines/:slug/destinations", destinationRoutes);
 app.use("/api/airlines", airlineApiRoutes);
 app.use("/api/airlines/info", airlineApiRoutes);
 app.use("/api/airlines/:slug", airlineApiRoutes);
