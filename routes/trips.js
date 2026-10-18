@@ -4,6 +4,8 @@ const Trip = require("../models/Trip");
 
 const router = express.Router();
 
+const MAX_TRIPS_PER_USER = 200;
+
 // Require a logged-in user
 const requireAuth = (req, res, next) => {
   if (!req.session?.userId) {
@@ -73,6 +75,19 @@ router.post("/", async (req, res) => {
       });
     }
 
+    // Check how many trips the user already has
+    const tripCount = await Trip.countDocuments({
+      user: req.session.userId,
+    });
+
+    // Prevent creating more than the allowed number
+    if (tripCount >= MAX_TRIPS_PER_USER) {
+      return res.status(409).json({
+        message: `You have reached the maximum of ${MAX_TRIPS_PER_USER} trips.`,
+      });
+    }
+
+    // Create the trip
     const trip = await Trip.create({
       user: req.session.userId,
       name: name.trim(),
@@ -180,6 +195,17 @@ router.post("/:id/destinations", async (req, res) => {
       {
         _id: id,
         user: req.session.userId,
+        $or: [
+          { destinations: code },
+          {
+            $expr: {
+              $lt: [
+                { $size: { $ifNull: ["$destinations", []] } },
+                MAX_DESTINATIONS_PER_TRIP,
+              ],
+            },
+          },
+        ],
       },
       {
         $addToSet: {
@@ -193,8 +219,19 @@ router.post("/:id/destinations", async (req, res) => {
     );
 
     if (!trip) {
-      return res.status(404).json({
-        message: "Trip not found.",
+      const existingTrip = await Trip.exists({
+        _id: id,
+        user: req.session.userId,
+      });
+
+      if (!existingTrip) {
+        return res.status(404).json({
+          message: "Trip not found.",
+        });
+      }
+
+      return res.status(409).json({
+        message: `Maximum of ${MAX_DESTINATIONS_PER_TRIP} destinations reached.`,
       });
     }
 

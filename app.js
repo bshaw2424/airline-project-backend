@@ -6,6 +6,7 @@ const path = require("path");
 const methodOverride = require("method-override");
 const session = require("express-session");
 const MongoStore = require("connect-mongo");
+const helmet = require("helmet");
 
 // const airlineRoutes = require("./routes/airlines");
 // const destinationRoutes = require("./routes/destinations");
@@ -19,16 +20,30 @@ const verifyOrigin = require("./middleware/verifyOrigin");
 const { databaseConnection, MONGODB_URL } = require("./databaseConnect");
 
 const app = express();
+
 const PORT = process.env.PORT || 8000;
 const isProduction = process.env.NODE_ENV === "production";
+
+// Helmet - Add HTTP security headers.
+app.use(
+  helmet({
+    contentSecurityPolicy: false,
+  }),
+);
 
 // DigitalOcean runs the app behind a proxy.
 if (isProduction) {
   app.set("trust proxy", 1);
 }
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// Limit incoming request body sizes.
+app.use(express.json({ limit: "50kb" }));
+app.use(
+  express.urlencoded({
+    extended: true,
+    limit: "50kb",
+  }),
+);
 
 app.set("view engine", "ejs");
 app.set("views", path.join(__dirname, "views"));
@@ -77,13 +92,25 @@ app.use("/api", (req, res, next) => {
   return verifyOrigin(req, res, next);
 });
 
-// Authentication Routes
+// TEMPORARY: Verify proxy configuration
+app.get("/api/debug/proxy", (req, res) => {
+  res.json({
+    ip: req.ip,
+    ips: req.ips,
+    protocol: req.protocol,
+    secure: req.secure,
+  });
+});
+
+// Authentication routes - Apply rate limiting.
 app.use("/api/auth", authRoutes);
+
+// Favorites, collections, and trips.
 app.use("/api/favorites", favoriteRoutes);
 app.use("/api/collections", collectionRoutes);
 app.use("/api/trips", tripsRouter);
 
-// Existing public routes
+// Public airline API.
 // app.use("/airlines", airlineRoutes);
 // app.use("/airlines/:slug/destinations", destinationRoutes);
 app.use("/api/airlines", airlineApiRoutes);
