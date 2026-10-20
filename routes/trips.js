@@ -5,6 +5,7 @@ const Trip = require("../models/Trip");
 const router = express.Router();
 
 const MAX_TRIPS_PER_USER = 200;
+const MAX_DESTINATIONS_PER_TRIP = 50;
 
 // Require a logged-in user
 const requireAuth = (req, res, next) => {
@@ -24,27 +25,39 @@ router.post("/", async (req, res) => {
   try {
     const { name, destinationCode, startDate, endDate, notes = "" } = req.body;
 
+    // Validate trip name
     if (typeof name !== "string" || !name.trim() || name.trim().length > 100) {
       return res.status(400).json({
         message: "Trip name must be between 1 and 100 characters.",
       });
     }
 
-    if (
-      typeof destinationCode !== "string" ||
-      !/^[A-Za-z0-9]{3}$/.test(destinationCode)
-    ) {
+    // Airport code is optional
+    const code =
+      typeof destinationCode === "string"
+        ? destinationCode.trim().toUpperCase()
+        : "";
+
+    if (destinationCode != null && typeof destinationCode !== "string") {
       return res.status(400).json({
-        message: "A valid three-character airport code is required.",
+        message: "Invalid airport code.",
       });
     }
 
+    if (code && !/^[A-Z0-9]{3}$/.test(code)) {
+      return res.status(400).json({
+        message: "Airport code must contain three characters.",
+      });
+    }
+
+    // Validate notes
     if (typeof notes !== "string" || notes.length > 1000) {
       return res.status(400).json({
         message: "Notes cannot exceed 1000 characters.",
       });
     }
 
+    // Validate dates
     const parseDate = value => {
       if (value == null || value === "") return null;
 
@@ -75,23 +88,23 @@ router.post("/", async (req, res) => {
       });
     }
 
-    // Check how many trips the user already has
+    // Check the user's trip limit
     const tripCount = await Trip.countDocuments({
       user: req.session.userId,
     });
 
-    // Prevent creating more than the allowed number
     if (tripCount >= MAX_TRIPS_PER_USER) {
       return res.status(409).json({
         message: `You have reached the maximum of ${MAX_TRIPS_PER_USER} trips.`,
       });
     }
 
-    // Create the trip
+    // Create trip without requiring destinations
     const trip = await Trip.create({
       user: req.session.userId,
       name: name.trim(),
-      destinationCode: destinationCode.toUpperCase(),
+      destinationCode: code,
+      tripStops: [],
       startDate: parsedStartDate,
       endDate: parsedEndDate,
       notes: notes.trim(),
@@ -168,7 +181,7 @@ router.get("/:id", async (req, res) => {
 });
 
 // POST /api/trips/:id/destinations
-// Add a destination to an existing trip
+// Add a legacy airport-code destination to a trip
 router.post("/:id/destinations", async (req, res) => {
   try {
     const { id } = req.params;
@@ -255,7 +268,7 @@ router.post("/:id/destinations", async (req, res) => {
 });
 
 // DELETE /api/trips/:id/destinations/:airportCode
-// Remove a destination from a trip
+// Remove a legacy airport-code destination
 router.delete("/:id/destinations/:airportCode", async (req, res) => {
   try {
     const { id, airportCode } = req.params;
@@ -347,6 +360,7 @@ router.put("/:id", async (req, res) => {
       trip.name = name.trim();
     }
 
+    // Legacy airport code validation remains for now
     if (destinationCode !== undefined) {
       if (
         typeof destinationCode !== "string" ||

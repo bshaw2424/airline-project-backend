@@ -1,5 +1,41 @@
 const mongoose = require("mongoose");
 
+const tripStopSchema = new mongoose.Schema({
+  name: {
+    type: String,
+    required: true,
+    trim: true,
+    maxlength: 150,
+  },
+  type: {
+    type: String,
+    enum: ["city", "airport", "attraction", "region", "custom"],
+    required: true,
+  },
+  city: {
+    type: String,
+    trim: true,
+    default: "",
+  },
+  state: {
+    type: String,
+    trim: true,
+    default: "",
+  },
+  country: {
+    type: String,
+    trim: true,
+    default: "",
+  },
+  airportCode: {
+    type: String,
+    uppercase: true,
+    trim: true,
+    default: "",
+    match: /^[A-Z0-9]{3}$|^$/,
+  },
+});
+
 const tripSchema = new mongoose.Schema(
   {
     user: {
@@ -16,14 +52,16 @@ const tripSchema = new mongoose.Schema(
       maxlength: 100,
     },
 
+    // Legacy field — keep for existing trips
     destinationCode: {
       type: String,
-      required: true,
       uppercase: true,
       trim: true,
-      match: /^[A-Z0-9]{3}$/,
+      default: "",
+      match: /^[A-Z0-9]{3}$|^$/,
     },
 
+    // Legacy destinations — preserve existing airport codes
     destinations: {
       type: [
         {
@@ -33,6 +71,12 @@ const tripSchema = new mongoose.Schema(
           match: /^[A-Z0-9]{3}$/,
         },
       ],
+      default: [],
+    },
+
+    // New flexible trip destinations
+    tripStops: {
+      type: [tripStopSchema],
       default: [],
     },
 
@@ -53,9 +97,7 @@ const tripSchema = new mongoose.Schema(
       default: "",
     },
   },
-  {
-    timestamps: true,
-  },
+  { timestamps: true },
 );
 
 tripSchema.path("endDate").validate(function (endDate) {
