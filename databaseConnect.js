@@ -13,12 +13,23 @@ const MONGODB_URL =
   `?appName=airline-project-cluster`;
 
 const databaseConnection = mongoose
-  .connect(MONGODB_URL)
+  .connect(MONGODB_URL, {
+    family: 4,
+    serverSelectionTimeoutMS: 10000,
+  })
   .then(() => {
     console.log("Database connected");
   })
   .catch(err => {
-    console.error("Database connection error:", err);
+    console.error("Database connection error:", err.message);
+
+    if (err.reason?.servers) {
+      for (const [server, description] of err.reason.servers) {
+        console.log(`\nServer: ${server}`);
+        console.log("Server error:", description.error);
+      }
+    }
+
     throw err;
   });
 

@@ -322,6 +322,164 @@ router.delete("/:id/destinations/:airportCode", async (req, res) => {
   }
 });
 
+// POST /api/trips/:id/stops
+// Add a flexible destination to a trip
+router.post("/:id/stops", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const {
+      name,
+      type,
+      city = "",
+      state = "",
+      country = "",
+      airportCode = "",
+    } = req.body || {};
+
+    if (!mongoose.isValidObjectId(id)) {
+      return res.status(400).json({
+        message: "Invalid trip ID.",
+      });
+    }
+
+    const allowedTypes = ["city", "airport", "attraction", "region", "custom"];
+
+    if (typeof name !== "string" || !name.trim() || name.trim().length > 150) {
+      return res.status(400).json({
+        message: "Destination name must be between 1 and 150 characters.",
+      });
+    }
+
+    if (!allowedTypes.includes(type)) {
+      return res.status(400).json({
+        message: "Invalid destination type.",
+      });
+    }
+
+    const locationFields = [city, state, country];
+
+    if (
+      locationFields.some(
+        value => typeof value !== "string" || value.length > 150,
+      )
+    ) {
+      return res.status(400).json({
+        message: "Invalid destination location.",
+      });
+    }
+
+    if (typeof airportCode !== "string") {
+      return res.status(400).json({
+        message: "Invalid airport code.",
+      });
+    }
+
+    const code = airportCode.trim().toUpperCase();
+
+    if (code && !/^[A-Z0-9]{3}$/.test(code)) {
+      return res.status(400).json({
+        message: "Airport code must contain three characters.",
+      });
+    }
+
+    const trip = await Trip.findOne({
+      _id: id,
+      user: req.session.userId,
+    });
+
+    if (!trip) {
+      return res.status(404).json({
+        message: "Trip not found.",
+      });
+    }
+
+    const totalDestinations =
+      (trip.tripStops?.length || 0) + (trip.destinations?.length || 0);
+
+    if (totalDestinations >= MAX_DESTINATIONS_PER_TRIP) {
+      return res.status(409).json({
+        message: `Maximum of ${MAX_DESTINATIONS_PER_TRIP} destinations reached.`,
+      });
+    }
+
+    trip.tripStops.push({
+      name: name.trim(),
+      type,
+      city: city.trim(),
+      state: state.trim(),
+      country: country.trim(),
+      airportCode: code,
+    });
+
+    await trip.save();
+
+    return res.status(201).json({
+      message: "Destination added to trip successfully.",
+      trip,
+    });
+  } catch (error) {
+    console.error("Add trip stop error:", error);
+
+    if (error instanceof mongoose.Error.ValidationError) {
+      return res.status(400).json({
+        message: "Invalid destination information.",
+      });
+    }
+
+    return res.status(500).json({
+      message: "Unable to add destination to trip.",
+    });
+  }
+});
+
+// DELETE /api/trips/:id/stops/:stopId
+// Remove a flexible destination from a trip
+router.delete("/:id/stops/:stopId", async (req, res) => {
+  try {
+    const { id, stopId } = req.params;
+
+    if (!mongoose.isValidObjectId(id) || !mongoose.isValidObjectId(stopId)) {
+      return res.status(400).json({
+        message: "Invalid trip or destination ID.",
+      });
+    }
+
+    const trip = await Trip.findOne({
+      _id: id,
+      user: req.session.userId,
+    });
+
+    if (!trip) {
+      return res.status(404).json({
+        message: "Trip not found.",
+      });
+    }
+
+    const stop = trip.tripStops.id(stopId);
+
+    if (!stop) {
+      return res.status(404).json({
+        message: "Destination not found.",
+      });
+    }
+
+    trip.tripStops.pull({ _id: stopId });
+
+    await trip.save();
+
+    return res.status(200).json({
+      message: "Destination removed from trip successfully.",
+      trip,
+    });
+  } catch (error) {
+    console.error("Remove trip stop error:", error);
+
+    return res.status(500).json({
+      message: "Unable to remove destination from trip.",
+    });
+  }
+});
+
 // PUT /api/trips/:id - Update an existing trip
 router.put("/:id", async (req, res) => {
   try {
@@ -362,16 +520,21 @@ router.put("/:id", async (req, res) => {
 
     // Legacy airport code validation remains for now
     if (destinationCode !== undefined) {
-      if (
-        typeof destinationCode !== "string" ||
-        !/^[A-Za-z0-9]{3}$/.test(destinationCode)
-      ) {
+      if (typeof destinationCode !== "string") {
         return res.status(400).json({
-          message: "A valid three-character airport code is required.",
+          message: "Invalid airport code.",
         });
       }
 
-      trip.destinationCode = destinationCode.toUpperCase();
+      const code = destinationCode.trim().toUpperCase();
+
+      if (code && !/^[A-Z0-9]{3}$/.test(code)) {
+        return res.status(400).json({
+          message: "Airport code must contain three characters.",
+        });
+      }
+
+      trip.destinationCode = code;
     }
 
     if (notes !== undefined) {
