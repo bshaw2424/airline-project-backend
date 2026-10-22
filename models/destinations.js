@@ -36,7 +36,7 @@ const destinationSchema = new Schema({
   },
   airport_code: {
     type: String,
-    upercase: true,
+    uppercase: true,
     maxLength: 3,
     required: true,
   },

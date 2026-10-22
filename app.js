@@ -16,6 +16,7 @@ const favoriteRoutes = require("./routes/favoriteRoutes");
 const collectionRoutes = require("./routes/collectionRoutes");
 const tripsRouter = require("./routes/trips");
 const verifyOrigin = require("./middleware/verifyOrigin");
+const destinationSearchRoutes = require("./routes/destinationSearch");
 
 const { databaseConnection, MONGODB_URL } = require("./databaseConnect");
 
@@ -112,8 +113,12 @@ app.use("/api/trips", tripsRouter);
 
 // Public airline API.
 // app.use("/airlines", airlineRoutes);
+
 // app.use("/airlines/:slug/destinations", destinationRoutes);
 app.use("/api/airlines", airlineApiRoutes);
+
+// Public destination search API
+app.use("/api/destinations", destinationSearchRoutes);
 
 // Start only after MongoDB connects.
 databaseConnection

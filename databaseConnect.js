@@ -14,7 +14,6 @@ const MONGODB_URL =
 
 const databaseConnection = mongoose
   .connect(MONGODB_URL, {
-    family: 4,
     serverSelectionTimeoutMS: 10000,
   })
   .then(() => {
