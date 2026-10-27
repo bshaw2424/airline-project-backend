@@ -1,2 +1,4 @@
 /node_modules
 .env
+# Temporary development migration script
+/scripts/importHuntingTrip.js

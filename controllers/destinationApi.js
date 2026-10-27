@@ -1,4 +1,3 @@
-
 const Destination = require("../models/destinations");
 
 // GET /api/destinations/search?q=phoenix
@@ -20,10 +19,7 @@ module.exports.searchDestinations = async (req, res) => {
       });
     }
 
-    const escapedSearch = search.replace(
-      /[.*+?^${}()|[\]\\]/g,
-      "\\$&"
-    );
+    const escapedSearch = search.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
     const regex = new RegExp(escapedSearch, "i");
 
@@ -86,4 +82,3 @@ module.exports.searchDestinations = async (req, res) => {
     });
   }
 };
-

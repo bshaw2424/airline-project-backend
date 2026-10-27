@@ -6,10 +6,20 @@ const mongoose = require("mongoose");
 
 mongoose.set("strictQuery", false);
 
+// Validate the application environment.
+const NODE_ENV = process.env.NODE_ENV || "development";
+
+if (!["development", "production"].includes(NODE_ENV)) {
+  throw new Error(`Invalid NODE_ENV: ${NODE_ENV}`);
+}
+
+// Select the correct MongoDB database.
+const DB_NAME = NODE_ENV === "production" ? "undefined" : "flightinrange_dev";
+
 const MONGODB_URL =
   `mongodb+srv://${encodeURIComponent(process.env.DB_USERNAME)}:` +
   `${encodeURIComponent(process.env.DB_PASSWORD)}` +
-  `@airline-project-cluster.5z5h2wm.mongodb.net/undefined` +
+  `@airline-project-cluster.5z5h2wm.mongodb.net/${DB_NAME}` +
   `?appName=airline-project-cluster`;
 
 const databaseConnection = mongoose

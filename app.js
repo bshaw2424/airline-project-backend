@@ -93,16 +93,6 @@ app.use("/api", (req, res, next) => {
   return verifyOrigin(req, res, next);
 });
 
-// TEMPORARY: Verify proxy configuration
-app.get("/api/debug/proxy", (req, res) => {
-  res.json({
-    ip: req.ip,
-    ips: req.ips,
-    protocol: req.protocol,
-    secure: req.secure,
-  });
-});
-
 // Authentication routes - Apply rate limiting.
 app.use("/api/auth", authRoutes);
 

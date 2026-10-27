@@ -34,6 +34,11 @@ const tripStopSchema = new mongoose.Schema({
     default: "",
     match: /^[A-Z0-9]{3}$|^$/,
   },
+  order: {
+    type: Number,
+    default: 0,
+    min: 0,
+  },
 });
 
 const tripSchema = new mongoose.Schema(
@@ -95,6 +100,12 @@ const tripSchema = new mongoose.Schema(
       trim: true,
       maxlength: 1000,
       default: "",
+    },
+    coverImage: {
+      type: String,
+      trim: true,
+      default: "",
+      maxlength: 2048,
     },
   },
   { timestamps: true },

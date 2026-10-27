@@ -7,7 +7,10 @@ const router = express.Router();
 const MAX_TRIPS_PER_USER = 200;
 const MAX_DESTINATIONS_PER_TRIP = 50;
 
-// Require a logged-in user
+// --------------------------------------------------
+// AUTHENTICATION
+// --------------------------------------------------
+
 const requireAuth = (req, res, next) => {
   if (!req.session?.userId) {
     return res.status(401).json({
@@ -20,10 +23,21 @@ const requireAuth = (req, res, next) => {
 
 router.use(requireAuth);
 
-// POST /api/trips - Create a new trip
+// --------------------------------------------------
+// CREATE TRIP
+// POST /api/trips
+// --------------------------------------------------
+
 router.post("/", async (req, res) => {
   try {
-    const { name, destinationCode, startDate, endDate, notes = "" } = req.body;
+    const {
+      name,
+      destinationCode,
+      startDate,
+      endDate,
+      notes = "",
+      coverImage = "",
+    } = req.body;
 
     // Validate trip name
     if (typeof name !== "string" || !name.trim() || name.trim().length > 100) {
@@ -32,7 +46,7 @@ router.post("/", async (req, res) => {
       });
     }
 
-    // Airport code is optional
+    // Legacy primary airport code remains optional
     const code =
       typeof destinationCode === "string"
         ? destinationCode.trim().toUpperCase()
@@ -57,7 +71,32 @@ router.post("/", async (req, res) => {
       });
     }
 
-    // Validate dates
+    // Validate cover image URL
+    if (typeof coverImage !== "string" || coverImage.length > 2048) {
+      return res.status(400).json({
+        message: "Invalid trip cover image.",
+      });
+    }
+
+    const normalizedCoverImage = coverImage.trim();
+
+    if (normalizedCoverImage) {
+      try {
+        const imageUrl = new URL(normalizedCoverImage);
+
+        if (!["https:", "http:"].includes(imageUrl.protocol)) {
+          return res.status(400).json({
+            message: "Cover image must use HTTP or HTTPS.",
+          });
+        }
+      } catch {
+        return res.status(400).json({
+          message: "Please provide a valid cover image URL.",
+        });
+      }
+    }
+
+    // Parse and validate dates
     const parseDate = value => {
       if (value == null || value === "") return null;
 
@@ -88,7 +127,7 @@ router.post("/", async (req, res) => {
       });
     }
 
-    // Check the user's trip limit
+    // Check user's trip limit
     const tripCount = await Trip.countDocuments({
       user: req.session.userId,
     });
@@ -99,7 +138,7 @@ router.post("/", async (req, res) => {
       });
     }
 
-    // Create trip without requiring destinations
+    // Create trip
     const trip = await Trip.create({
       user: req.session.userId,
       name: name.trim(),
@@ -108,6 +147,7 @@ router.post("/", async (req, res) => {
       startDate: parsedStartDate,
       endDate: parsedEndDate,
       notes: notes.trim(),
+      coverImage: normalizedCoverImage,
     });
 
     return res.status(201).json({
@@ -129,7 +169,10 @@ router.post("/", async (req, res) => {
   }
 });
 
-// GET /api/trips - Retrieve the logged-in user's trips
+// --------------------------------------------------
+// GET ALL TRIPS
+// --------------------------------------------------
+
 router.get("/", async (req, res) => {
   try {
     const trips = await Trip.find({
@@ -148,7 +191,10 @@ router.get("/", async (req, res) => {
   }
 });
 
-// GET /api/trips/:id - Retrieve a single trip
+// --------------------------------------------------
+// GET SINGLE TRIP
+// --------------------------------------------------
+
 router.get("/:id", async (req, res) => {
   try {
     const { id } = req.params;
@@ -170,7 +216,9 @@ router.get("/:id", async (req, res) => {
       });
     }
 
-    return res.status(200).json({ trip });
+    return res.status(200).json({
+      trip,
+    });
   } catch (error) {
     console.error("Get single trip error:", error);
 
@@ -180,8 +228,11 @@ router.get("/:id", async (req, res) => {
   }
 });
 
-// POST /api/trips/:id/destinations
-// Add a legacy airport-code destination to a trip
+// --------------------------------------------------
+// LEGACY DESTINATIONS
+// --------------------------------------------------
+
+// Add legacy airport-code destination
 router.post("/:id/destinations", async (req, res) => {
   try {
     const { id } = req.params;
@@ -209,11 +260,17 @@ router.post("/:id/destinations", async (req, res) => {
         _id: id,
         user: req.session.userId,
         $or: [
-          { destinations: code },
+          {
+            destinations: code,
+          },
           {
             $expr: {
               $lt: [
-                { $size: { $ifNull: ["$destinations", []] } },
+                {
+                  $size: {
+                    $ifNull: ["$destinations", []],
+                  },
+                },
                 MAX_DESTINATIONS_PER_TRIP,
               ],
             },
@@ -267,8 +324,7 @@ router.post("/:id/destinations", async (req, res) => {
   }
 });
 
-// DELETE /api/trips/:id/destinations/:airportCode
-// Remove a legacy airport-code destination
+// Remove legacy airport-code destination
 router.delete("/:id/destinations/:airportCode", async (req, res) => {
   try {
     const { id, airportCode } = req.params;
@@ -322,11 +378,15 @@ router.delete("/:id/destinations/:airportCode", async (req, res) => {
   }
 });
 
-// POST /api/trips/:id/stops
-// Add a flexible destination to a trip
+// --------------------------------------------------
+// FLEXIBLE TRIP STOPS
+// --------------------------------------------------
+
+// Add flexible destination
 router.post("/:id/stops", async (req, res) => {
   try {
     const { id } = req.params;
+
     const {
       name,
       type,
@@ -402,6 +462,13 @@ router.post("/:id/stops", async (req, res) => {
       });
     }
 
+    // Find the next available order without modifying
+    // the existing itinerary.
+    const nextOrder =
+      trip.tripStops.length === 0
+        ? 0
+        : Math.max(...trip.tripStops.map(stop => stop.order)) + 1;
+
     trip.tripStops.push({
       name: name.trim(),
       type,
@@ -409,6 +476,7 @@ router.post("/:id/stops", async (req, res) => {
       state: state.trim(),
       country: country.trim(),
       airportCode: code,
+      order: nextOrder,
     });
 
     await trip.save();
@@ -432,8 +500,7 @@ router.post("/:id/stops", async (req, res) => {
   }
 });
 
-// DELETE /api/trips/:id/stops/:stopId
-// Remove a flexible destination from a trip
+// Remove flexible destination
 router.delete("/:id/stops/:stopId", async (req, res) => {
   try {
     const { id, stopId } = req.params;
@@ -463,7 +530,18 @@ router.delete("/:id/stops/:stopId", async (req, res) => {
       });
     }
 
-    trip.tripStops.pull({ _id: stopId });
+    // Remove selected stop.
+    trip.tripStops.pull({
+      _id: stopId,
+    });
+
+    // Sort remaining stops using their existing order.
+    trip.tripStops.sort((a, b) => a.order - b.order);
+
+    // Reassign sequential order values.
+    trip.tripStops.forEach((stop, index) => {
+      stop.order = index;
+    });
 
     await trip.save();
 
@@ -480,7 +558,100 @@ router.delete("/:id/stops/:stopId", async (req, res) => {
   }
 });
 
-// PUT /api/trips/:id - Update an existing trip
+// --------------------------------------------------
+// REORDER FLEXIBLE TRIP STOPS
+// PUT /api/trips/:id/stops/reorder
+// --------------------------------------------------
+
+router.put("/:id/stops/reorder", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { stopIds } = req.body || {};
+
+    if (!mongoose.isValidObjectId(id)) {
+      return res.status(400).json({
+        message: "Invalid trip ID.",
+      });
+    }
+
+    if (
+      !Array.isArray(stopIds) ||
+      stopIds.length > MAX_DESTINATIONS_PER_TRIP ||
+      !stopIds.every(
+        stopId =>
+          typeof stopId === "string" && mongoose.isValidObjectId(stopId),
+      )
+    ) {
+      return res.status(400).json({
+        message: "Invalid destination order.",
+      });
+    }
+
+    const uniqueIds = new Set(stopIds);
+
+    if (uniqueIds.size !== stopIds.length) {
+      return res.status(400).json({
+        message: "Duplicate destinations are not allowed.",
+      });
+    }
+
+    const trip = await Trip.findOne({
+      _id: id,
+      user: req.session.userId,
+    });
+
+    if (!trip) {
+      return res.status(404).json({
+        message: "Trip not found.",
+      });
+    }
+
+    const existingIds = new Set(
+      trip.tripStops.map(stop => stop._id.toString()),
+    );
+
+    if (
+      stopIds.length !== trip.tripStops.length ||
+      stopIds.some(stopId => !existingIds.has(stopId))
+    ) {
+      return res.status(400).json({
+        message: "Destination order does not match this trip.",
+      });
+    }
+
+    const orderMap = new Map(stopIds.map((stopId, index) => [stopId, index]));
+
+    trip.tripStops.forEach(stop => {
+      stop.order = orderMap.get(stop._id.toString());
+    });
+
+    trip.tripStops.sort((a, b) => a.order - b.order);
+
+    await trip.save();
+
+    return res.status(200).json({
+      message: "Trip itinerary reordered successfully.",
+      trip,
+    });
+  } catch (error) {
+    console.error("Reorder trip stops error:", error);
+
+    if (error instanceof mongoose.Error.ValidationError) {
+      return res.status(400).json({
+        message: "Invalid destination order.",
+      });
+    }
+
+    return res.status(500).json({
+      message: "Unable to reorder trip destinations.",
+    });
+  }
+});
+
+// --------------------------------------------------
+// UPDATE TRIP
+// --------------------------------------------------
+
 router.put("/:id", async (req, res) => {
   try {
     const { id } = req.params;
@@ -502,7 +673,8 @@ router.put("/:id", async (req, res) => {
       });
     }
 
-    const { name, destinationCode, startDate, endDate, notes } = req.body;
+    const { name, destinationCode, startDate, endDate, notes, coverImage } =
+      req.body;
 
     if (name !== undefined) {
       if (
@@ -518,7 +690,7 @@ router.put("/:id", async (req, res) => {
       trip.name = name.trim();
     }
 
-    // Legacy airport code validation remains for now
+    // Legacy airport code validation remains for now.
     if (destinationCode !== undefined) {
       if (typeof destinationCode !== "string") {
         return res.status(400).json({
@@ -592,6 +764,35 @@ router.put("/:id", async (req, res) => {
       });
     }
 
+    // Update trip cover image
+    if (coverImage !== undefined) {
+      if (typeof coverImage !== "string" || coverImage.length > 2048) {
+        return res.status(400).json({
+          message: "Invalid trip cover image.",
+        });
+      }
+
+      const normalizedCoverImage = coverImage.trim();
+
+      if (normalizedCoverImage) {
+        try {
+          const imageUrl = new URL(normalizedCoverImage);
+
+          if (!["https:", "http:"].includes(imageUrl.protocol)) {
+            return res.status(400).json({
+              message: "Cover image must use HTTP or HTTPS.",
+            });
+          }
+        } catch {
+          return res.status(400).json({
+            message: "Please provide a valid cover image URL.",
+          });
+        }
+      }
+
+      trip.coverImage = normalizedCoverImage;
+    }
+
     await trip.save();
 
     return res.status(200).json({
@@ -613,7 +814,10 @@ router.put("/:id", async (req, res) => {
   }
 });
 
-// DELETE /api/trips/:id - Delete a trip
+// --------------------------------------------------
+// DELETE TRIP
+// --------------------------------------------------
+
 router.delete("/:id", async (req, res) => {
   try {
     const { id } = req.params;
