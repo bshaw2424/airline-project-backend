@@ -1,5 +1,7 @@
 const express = require("express");
 const mongoose = require("mongoose");
+const User = require("../models/User");
+
 const MAX_COLLECTIONS_PER_USER = 50;
 const MAX_DESTINATIONS_PER_COLLECTION = 200;
 const MAX_PLACES_PER_COLLECTION = 200;
@@ -46,7 +48,7 @@ router.get("/", async (req, res) => {
 // POST create a collection
 router.post("/", async (req, res) => {
   try {
-    const { name, description = "" } = req.body;
+    const { name, description = "" } = req.body ?? {};
 
     if (typeof name !== "string" || !name.trim() || name.trim().length > 80) {
       return res.status(400).json({
@@ -60,27 +62,48 @@ router.post("/", async (req, res) => {
       });
     }
 
-    const collectionCount = await Collection.countDocuments({
-      user: req.session.userId,
-    });
+    const userId = req.session.userId;
 
-    if (collectionCount >= MAX_COLLECTIONS_PER_USER) {
+    const result = await User.withActiveAccount(
+      userId,
+      req.session.sessionVersion ?? 0,
+      async session => {
+        const collectionCount = await Collection.countDocuments({
+          user: userId,
+        }).session(session);
+
+        if (collectionCount >= MAX_COLLECTIONS_PER_USER) {
+          return { limitReached: true };
+        }
+
+        const collection = new Collection({
+          user: userId,
+          name: name.trim(),
+          description: description.trim(),
+        });
+
+        await collection.save({ session });
+        return { collection };
+      },
+    );
+
+    if (!result) {
+      return res.status(401).json({
+        message: "Please log in to manage collections.",
+      });
+    }
+
+    if (result.limitReached) {
       return res.status(403).json({
         message: `You have reached the maximum of ${MAX_COLLECTIONS_PER_USER} collections.`,
       });
     }
 
-    const collection = await Collection.create({
-      user: req.session.userId,
-      name: name.trim(),
-      description: description.trim(),
-    });
-
-    res.status(201).json({ collection });
+    return res.status(201).json({ collection: result.collection });
   } catch (error) {
     console.error("Create collection error:", error);
 
-    res.status(500).json({
+    return res.status(500).json({
       message: "Unable to create collection.",
     });
   }

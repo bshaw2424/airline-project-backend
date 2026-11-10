@@ -1,6 +1,7 @@
 const express = require("express");
 const mongoose = require("mongoose");
 const Trip = require("../models/Trip");
+const User = require("../models/User");
 
 const router = express.Router();
 
@@ -37,20 +38,13 @@ router.post("/", async (req, res) => {
       endDate,
       notes = "",
       coverImage = "",
-    } = req.body;
+    } = req.body ?? {};
 
-    // Validate trip name
     if (typeof name !== "string" || !name.trim() || name.trim().length > 100) {
       return res.status(400).json({
         message: "Trip name must be between 1 and 100 characters.",
       });
     }
-
-    // Legacy primary airport code remains optional
-    const code =
-      typeof destinationCode === "string"
-        ? destinationCode.trim().toUpperCase()
-        : "";
 
     if (destinationCode != null && typeof destinationCode !== "string") {
       return res.status(400).json({
@@ -58,20 +52,23 @@ router.post("/", async (req, res) => {
       });
     }
 
+    const code =
+      typeof destinationCode === "string"
+        ? destinationCode.trim().toUpperCase()
+        : "";
+
     if (code && !/^[A-Z0-9]{3}$/.test(code)) {
       return res.status(400).json({
         message: "Airport code must contain three characters.",
       });
     }
 
-    // Validate notes
     if (typeof notes !== "string" || notes.length > 1000) {
       return res.status(400).json({
         message: "Notes cannot exceed 1000 characters.",
       });
     }
 
-    // Validate cover image URL
     if (typeof coverImage !== "string" || coverImage.length > 2048) {
       return res.status(400).json({
         message: "Invalid trip cover image.",
@@ -96,7 +93,6 @@ router.post("/", async (req, res) => {
       }
     }
 
-    // Parse and validate dates
     const parseDate = value => {
       if (value == null || value === "") return null;
 
@@ -127,32 +123,51 @@ router.post("/", async (req, res) => {
       });
     }
 
-    // Check user's trip limit
-    const tripCount = await Trip.countDocuments({
-      user: req.session.userId,
-    });
+    const userId = req.session.userId;
 
-    if (tripCount >= MAX_TRIPS_PER_USER) {
+    const result = await User.withActiveAccount(
+      userId,
+      req.session.sessionVersion ?? 0,
+      async session => {
+        const tripCount = await Trip.countDocuments({
+          user: userId,
+        }).session(session);
+
+        if (tripCount >= MAX_TRIPS_PER_USER) {
+          return { limitReached: true };
+        }
+
+        const trip = new Trip({
+          user: userId,
+          name: name.trim(),
+          destinationCode: code,
+          tripStops: [],
+          startDate: parsedStartDate,
+          endDate: parsedEndDate,
+          notes: notes.trim(),
+          coverImage: normalizedCoverImage,
+        });
+
+        await trip.save({ session });
+        return { trip };
+      },
+    );
+
+    if (!result) {
+      return res.status(401).json({
+        message: "Please log in to manage your trips.",
+      });
+    }
+
+    if (result.limitReached) {
       return res.status(409).json({
         message: `You have reached the maximum of ${MAX_TRIPS_PER_USER} trips.`,
       });
     }
 
-    // Create trip
-    const trip = await Trip.create({
-      user: req.session.userId,
-      name: name.trim(),
-      destinationCode: code,
-      tripStops: [],
-      startDate: parsedStartDate,
-      endDate: parsedEndDate,
-      notes: notes.trim(),
-      coverImage: normalizedCoverImage,
-    });
-
     return res.status(201).json({
       message: "Trip created successfully.",
-      trip,
+      trip: result.trip,
     });
   } catch (error) {
     console.error("Create trip error:", error);

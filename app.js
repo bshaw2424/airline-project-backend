@@ -10,6 +10,7 @@ const helmet = require("helmet");
 
 // const airlineRoutes = require("./routes/airlines");
 // const destinationRoutes = require("./routes/destinations");
+const User = require("./models/User");
 const airlineApiRoutes = require("./routes/airlineApi");
 const authRoutes = require("./routes/authRoutes");
 const favoriteRoutes = require("./routes/favoriteRoutes");
@@ -91,6 +92,29 @@ app.use("/api", (req, res, next) => {
   }
 
   return verifyOrigin(req, res, next);
+});
+
+app.use("/api", async (req, res, next) => {
+  if (!req.session?.userId) {
+    return next();
+  }
+
+  try {
+    const user = await User.findById(req.session.userId)
+      .select("sessionVersion")
+      .lean();
+
+    if (
+      !user ||
+      (req.session.sessionVersion ?? 0) !== (user.sessionVersion ?? 0)
+    ) {
+      return req.session.regenerate(next);
+    }
+
+    return next();
+  } catch (error) {
+    return next(error);
+  }
 });
 
 // Authentication routes - Apply rate limiting.
