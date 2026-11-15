@@ -18,6 +18,7 @@ const collectionRoutes = require("./routes/collectionRoutes");
 const tripsRouter = require("./routes/trips");
 const verifyOrigin = require("./middleware/verifyOrigin");
 const destinationSearchRoutes = require("./routes/destinationSearch");
+const feedbackRoutes = require("./routes/feedback");
 
 const { databaseConnection, MONGODB_URL } = require("./databaseConnect");
 
@@ -124,6 +125,8 @@ app.use("/api/auth", authRoutes);
 app.use("/api/favorites", favoriteRoutes);
 app.use("/api/collections", collectionRoutes);
 app.use("/api/trips", tripsRouter);
+// Accept feedback from both signed-in users and guests.
+app.use("/api/feedback", feedbackRoutes);
 
 // Public airline API.
 // app.use("/airlines", airlineRoutes);
