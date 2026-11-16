@@ -1,4 +1,20 @@
 const mongoose = require("mongoose");
+const tripStopMediaSchema = new mongoose.Schema({
+  storageKey: {
+    type: String,
+    required: true,
+  },
+  uploadedAt: {
+    type: Date,
+    default: Date.now,
+  },
+  caption: {
+    type: String,
+    trim: true,
+    maxlength: 200,
+    default: "",
+  },
+});
 
 const tripStopSchema = new mongoose.Schema({
   name: {
@@ -38,6 +54,14 @@ const tripStopSchema = new mongoose.Schema({
     type: Number,
     default: 0,
     min: 0,
+  },
+  photos: {
+    type: [tripStopMediaSchema],
+    default: [],
+  },
+  videos: {
+    type: [tripStopMediaSchema],
+    default: [],
   },
 });
 
