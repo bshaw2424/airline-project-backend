@@ -2,6 +2,7 @@ const express = require("express");
 const mongoose = require("mongoose");
 const Trip = require("../models/Trip");
 const User = require("../models/User");
+const tripIdeas = require("../data/tripIdeas");
 const { randomUUID } = require("node:crypto");
 const multer = require("multer");
 const sharp = require("sharp");
@@ -340,6 +341,16 @@ router.post("/:id/stops/:stopId/photos", async (req, res) => {
     },
   };
 
+  const uploadStartedAt = performance.now();
+  let previousStepAt = uploadStartedAt;
+  const timings = {};
+
+  const recordStep = step => {
+    const now = performance.now();
+    timings[step] = Math.round(now - previousStepAt);
+    previousStepAt = now;
+  };
+
   try {
     const trip = await Trip.findOne({
       _id: id,
@@ -428,6 +439,13 @@ router.post("/:id/stops/:stopId/photos", async (req, res) => {
         message: "The destination was removed or has reached its photo limit.",
       });
     }
+
+    console.info("Trip stop photo upload timing:", {
+      ...timings,
+      totalMs: Math.round(performance.now() - uploadStartedAt),
+      inputBytes: req.file.size,
+      outputBytes: photoBuffer.length,
+    });
 
     return res.status(201).json({
       message: "Photo added successfully.",
@@ -837,7 +855,6 @@ router.get("/", async (req, res) => {
 // --------------------------------------------------
 // GET SINGLE TRIP
 // --------------------------------------------------
-
 router.get("/:id", async (req, res) => {
   try {
     const { id } = req.params;
@@ -868,6 +885,131 @@ router.get("/:id", async (req, res) => {
     return res.status(500).json({
       message: "Unable to retrieve trip.",
     });
+  }
+});
+
+// --------------------------------------------------
+// TRIP IDEA RECOMMENDATIONS
+// --------------------------------------------------
+router.post("/:id/ideas", async (req, res) => {
+  const { id } = req.params;
+  const { ideaId } = req.body ?? {};
+
+  if (!mongoose.isValidObjectId(id)) {
+    return res.status(400).json({ message: "Invalid trip ID." });
+  }
+
+  if (typeof ideaId !== "string" || !tripIdeas.has(ideaId)) {
+    return res.status(400).json({ message: "Choose a valid trip idea." });
+  }
+
+  try {
+    const trip = await Trip.findOneAndUpdate(
+      { _id: id, user: req.session.userId },
+      { $addToSet: { savedIdeas: ideaId } },
+      { new: true, runValidators: true, projection: { savedIdeas: 1 } },
+    );
+
+    if (!trip) {
+      return res.status(404).json({ message: "Trip not found." });
+    }
+
+    return res.status(200).json({ savedIdeas: trip.savedIdeas });
+  } catch (error) {
+    console.error("Save trip idea error:", error);
+    return res.status(500).json({ message: "Unable to save trip idea." });
+  }
+});
+
+router.post("/:id/ideas/:ideaId/move", async (req, res) => {
+  const { id, ideaId } = req.params;
+  const idea = tripIdeas.get(ideaId);
+
+  if (!mongoose.isValidObjectId(id)) {
+    return res.status(400).json({ message: "Invalid trip ID." });
+  }
+
+  if (!idea) {
+    return res.status(400).json({ message: "Choose a valid trip idea." });
+  }
+
+  const ownerFilter = { _id: id, user: req.session.userId };
+
+  try {
+    const trip = await Trip.findOne(ownerFilter)
+      .select("savedIdeas tripStops.order destinations")
+      .lean();
+
+    if (!trip) {
+      return res.status(404).json({ message: "Trip not found." });
+    }
+
+    if (!(trip.savedIdeas ?? []).includes(ideaId)) {
+      return res.status(409).json({ message: "This idea is no longer saved." });
+    }
+
+    const stops = trip.tripStops ?? [];
+    const totalStops = stops.length + (trip.destinations?.length ?? 0);
+
+    if (totalStops >= MAX_DESTINATIONS_PER_TRIP) {
+      return res.status(409).json({
+        message: `Maximum of ${MAX_DESTINATIONS_PER_TRIP} destinations reached.`,
+      });
+    }
+
+    const lastOrder = stops.length
+      ? Math.max(...stops.map(stop => stop.order ?? 0))
+      : -1;
+
+    const updatedTrip = await Trip.findOneAndUpdate(
+      {
+        ...ownerFilter,
+        savedIdeas: ideaId,
+        $expr: {
+          $and: [
+            {
+              $lt: [
+                {
+                  $add: [
+                    { $size: { $ifNull: ["$tripStops", []] } },
+                    { $size: { $ifNull: ["$destinations", []] } },
+                  ],
+                },
+                MAX_DESTINATIONS_PER_TRIP,
+              ],
+            },
+            {
+              $eq: [{ $ifNull: [{ $max: "$tripStops.order" }, -1] }, lastOrder],
+            },
+          ],
+        },
+      },
+      {
+        $push: {
+          tripStops: {
+            name: idea.name,
+            type: idea.category === "Beaches" ? "custom" : "attraction",
+            city: "San Diego",
+            state: "California",
+            country: "United States",
+            order: lastOrder + 1,
+          },
+        },
+        $pull: { savedIdeas: ideaId },
+      },
+      { new: true, runValidators: true },
+    );
+
+    if (!updatedTrip) {
+      return res.status(409).json({
+        message: "The trip changed. Refresh it and try again.",
+      });
+    }
+
+    return res.status(201).json({ trip: updatedTrip });
+  } catch (error) {
+    console.error("Move trip idea error:", error);
+    return res.status(500).json({ message: "Unable to move this idea." });
   }
 });
 
