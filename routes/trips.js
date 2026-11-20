@@ -357,6 +357,7 @@ router.post("/:id/stops/:stopId/photos", async (req, res) => {
       user: req.session.userId,
       "tripStops._id": stopId,
     }).select("tripStops");
+    recordStep("tripLookupMs");
 
     const stop = trip?.tripStops.id(stopId);
 
@@ -378,6 +379,7 @@ router.post("/:id/stops/:stopId/photos", async (req, res) => {
         else resolve();
       });
     });
+    recordStep("receivePhotoMs");
 
     if (!req.file) {
       return res.status(400).json({ message: "Choose a photo to upload." });
@@ -408,6 +410,7 @@ router.post("/:id/stops/:stopId/photos", async (req, res) => {
     } catch {
       return res.status(400).json({ message: "Unable to read this image." });
     }
+    recordStep("processPhotoMs");
 
     const storageKey = `trip-photos/${id}/${stopId}/${randomUUID()}.jpg`;
     const object = {
@@ -424,6 +427,8 @@ router.post("/:id/stops/:stopId/photos", async (req, res) => {
       }),
     );
 
+    recordStep("spacesUploadMs");
+
     // Check the limit again in the update so simultaneous uploads respect it.
     const updatedTrip = await Trip.findOneAndUpdate(
       eligibleStopFilter,
@@ -432,6 +437,8 @@ router.post("/:id/stops/:stopId/photos", async (req, res) => {
       },
       { new: true, runValidators: true },
     );
+
+    recordStep("savePhotoMs");
 
     if (!updatedTrip) {
       await spaces.send(new DeleteObjectCommand(object));
@@ -659,7 +666,12 @@ router.post("/:id/stops/:stopId/videos", async (req, res) => {
       });
     }
 
-    console.error("Upload trip stop video error:", error.name, error.code);
+    console.error(
+      "Upload trip stop video error:",
+      error.name,
+      error.code,
+      error.message,
+    );
     return res.status(500).json({ message: "Unable to upload the video." });
   } finally {
     if (tempDirectory) {
