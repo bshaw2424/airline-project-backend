@@ -1041,6 +1041,31 @@ router.post("/:id/ideas", async (req, res) => {
   }
 });
 
+router.delete("/:id/ideas/:ideaId", async (req, res) => {
+  const { id, ideaId } = req.params;
+
+  if (!mongoose.isValidObjectId(id)) {
+    return res.status(400).json({ message: "Invalid trip ID." });
+  }
+
+  try {
+    const trip = await Trip.findOneAndUpdate(
+      { _id: id, user: req.session.userId },
+      { $pull: { savedIdeas: ideaId } },
+      { new: true, projection: { savedIdeas: 1 } },
+    );
+
+    if (!trip) {
+      return res.status(404).json({ message: "Trip not found." });
+    }
+
+    return res.status(200).json({ savedIdeas: trip.savedIdeas ?? [] });
+  } catch (error) {
+    console.error("Unsave trip idea error:", error.name);
+    return res.status(500).json({ message: "Unable to unsave this idea." });
+  }
+});
+
 router.post("/:id/ideas/:ideaId/move", async (req, res) => {
   const { id, ideaId } = req.params;
   const idea = tripIdeas.get(ideaId);
