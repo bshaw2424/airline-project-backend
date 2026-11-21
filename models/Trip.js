@@ -4,6 +4,8 @@ const tripStopMediaSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
+  thumbnailKey: { type: String, trim: true },
+  durationSeconds: { type: Number, min: 0 },
   uploadedAt: {
     type: Date,
     default: Date.now,
@@ -103,9 +105,21 @@ const tripSchema = new mongoose.Schema(
       default: [],
     },
 
-    // New flexible trip destinations
+    // Flexible trip destinations
     tripStops: {
       type: [tripStopSchema],
+      default: [],
+    },
+
+    // IDs of curated places the traveler saved for this trip.
+    savedIdeas: {
+      type: [
+        {
+          type: String,
+          trim: true,
+          maxlength: 100,
+        },
+      ],
       default: [],
     },
 

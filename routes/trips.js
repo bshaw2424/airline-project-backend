@@ -28,7 +28,7 @@ const MAX_TRIPS_PER_USER = 200;
 const MAX_DESTINATIONS_PER_TRIP = 50;
 const MAX_PHOTOS_PER_STOP = 10;
 const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
-const MAX_VIDEOS_PER_STOP = 3;
+const MAX_VIDEOS_PER_STOP = 30;
 const MAX_VIDEO_BYTES = 25 * 1024 * 1024;
 const MAX_VIDEO_SECONDS = 30;
 
@@ -146,6 +146,18 @@ router.get("/:id/stops/:stopId/videos", async (req, res) => {
         _id: video._id,
         uploadedAt: video.uploadedAt,
         caption: video.caption ?? "",
+        durationSeconds: video.durationSeconds ?? null,
+        thumbnailUrl: video.thumbnailKey
+          ? await getSignedUrl(
+              spaces,
+              new GetObjectCommand({
+                Bucket: process.env.SPACES_BUCKET,
+                Key: video.thumbnailKey,
+                ResponseCacheControl: "private, no-store",
+              }),
+              { expiresIn: 300 },
+            )
+          : null,
         url: await getSignedUrl(
           spaces,
           new GetObjectCommand({
@@ -495,9 +507,9 @@ router.post("/:id/stops/:stopId/videos", async (req, res) => {
     const stop = trip?.tripStops.id(stopId);
 
     if (!stop) {
-      return res
-        .status(404)
-        .json({ message: "Trip or destination not found." });
+      return res.status(404).json({
+        message: "Trip or destination not found.",
+      });
     }
 
     if ((stop.videos?.length ?? 0) >= MAX_VIDEOS_PER_STOP) {
@@ -535,7 +547,12 @@ router.post("/:id/stops/:stopId/videos", async (req, res) => {
       "-i",
       req.file.path,
     ];
+
     const outputPath = join(tempDirectory, "output.mp4");
+
+    const thumbnailPath = join(tempDirectory, "thumbnail.webp");
+    let thumbnailSize = 0;
+    let durationSeconds;
 
     try {
       // Require a video stream and validate the clip duration.
@@ -572,6 +589,8 @@ router.post("/:id/stops/:stopId/videos", async (req, res) => {
         });
       }
 
+      durationSeconds = duration;
+
       await runMediaCommand(
         "ffmpeg",
         [
@@ -604,6 +623,43 @@ router.post("/:id/stops/:stopId/videos", async (req, res) => {
         ],
         { timeout: 90_000, windowsHide: true },
       );
+
+      // Sample a frame slightly into the clip for the thumbnail.
+      const thumbnailTime = Math.min(1, duration / 3);
+
+      try {
+        await runMediaCommand(
+          "ffmpeg",
+          [
+            "-hide_banner",
+            "-loglevel",
+            "error",
+            "-nostdin",
+            "-ss",
+            String(thumbnailTime),
+            "-i",
+            outputPath,
+            "-frames:v",
+            "1",
+            "-vf",
+            "scale=480:480:force_original_aspect_ratio=decrease",
+            "-c:v",
+            "libwebp",
+            "-quality",
+            "80",
+            thumbnailPath,
+          ],
+          { timeout: 10_000, windowsHide: true },
+        );
+
+        thumbnailSize = (await stat(thumbnailPath)).size;
+        console.info("Video thumbnail generated:", { bytes: thumbnailSize });
+      } catch (error) {
+        console.warn(
+          "Video thumbnail generation failed:",
+          error.code ?? error.name,
+        );
+      }
     } catch (error) {
       if (error.code === "ENOENT") throw error;
 
@@ -627,6 +683,50 @@ router.post("/:id/stops/:stopId/videos", async (req, res) => {
       }),
     );
 
+    const videoEntry = {
+      storageKey,
+      durationSeconds,
+      uploadedAt: new Date(),
+    };
+
+    const deleteVideoObject = async objectToDelete => {
+      try {
+        await spaces.send(new DeleteObjectCommand(objectToDelete));
+      } catch (error) {
+        console.warn(
+          "Trip video storage cleanup failed:",
+          error.code ?? error.name,
+        );
+      }
+    };
+
+    if (thumbnailSize > 0) {
+      const thumbnailObject = {
+        Bucket: object.Bucket,
+        Key: storageKey.replace(/\.mp4$/, ".webp"),
+      };
+
+      try {
+        await spaces.send(
+          new PutObjectCommand({
+            ...thumbnailObject,
+            Body: createReadStream(thumbnailPath),
+            ContentLength: thumbnailSize,
+            ContentType: "image/webp",
+            ACL: "private",
+          }),
+        );
+
+        videoEntry.thumbnailKey = thumbnailObject.Key;
+      } catch (error) {
+        console.warn(
+          "Video thumbnail upload failed:",
+          error.code ?? error.name,
+        );
+        await deleteVideoObject(thumbnailObject);
+      }
+    }
+
     // Recheck the limit in MongoDB so concurrent uploads respect it.
     const videoLimitField = `videos.${MAX_VIDEOS_PER_STOP - 1}`;
     const updatedTrip = await Trip.findOneAndUpdate(
@@ -640,13 +740,21 @@ router.post("/:id/stops/:stopId/videos", async (req, res) => {
         },
       },
       {
-        $push: { "tripStops.$.videos": { storageKey, uploadedAt: new Date() } },
+        $push: { "tripStops.$.videos": videoEntry },
       },
       { new: true, runValidators: true },
     );
 
     if (!updatedTrip) {
-      await spaces.send(new DeleteObjectCommand(object));
+      await deleteVideoObject(object);
+
+      if (videoEntry.thumbnailKey) {
+        await deleteVideoObject({
+          Bucket: object.Bucket,
+          Key: videoEntry.thumbnailKey,
+        });
+      }
+
       return res.status(409).json({
         message: "The destination was removed or has reached its video limit.",
       });
